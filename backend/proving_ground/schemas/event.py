@@ -229,3 +229,47 @@ class BulkVMVisibilityUpdate(BaseModel):
 
     vm_id: UUID
     is_hidden: bool
+
+
+# ============ Results Schemas ============
+
+
+class LearnerResult(BaseModel):
+    """One student's Knowledge Check results in an event, read from their learner record."""
+
+    user_id: UUID
+    username: Optional[str] = None
+    range_id: Optional[UUID] = None
+    completed_steps: int = 0
+    total_steps: int = 0
+    answered: int = 0
+    total_questions: int = 0
+    correct: int = 0
+    # None until the learner has answered something: 0% and "not started" are different facts.
+    score_pct: Optional[float] = None
+    last_activity: Optional[datetime] = None
+
+
+class QuestionOptionResult(BaseModel):
+    id: str
+    text: Optional[str] = None
+    correct: bool = False
+    chosen: int = 0  # how many students picked this option
+
+
+class QuestionResult(BaseModel):
+    """One Knowledge Check question across the event's students."""
+
+    question_id: str
+    step_id: Optional[str] = None
+    prompt: Optional[str] = None
+    answered: int = 0
+    correct: int = 0
+    correct_pct: Optional[float] = None
+    options: List[QuestionOptionResult] = Field(default_factory=list)
+
+
+class EventResultsResponse(BaseModel):
+    event_id: UUID
+    learners: List[LearnerResult] = Field(default_factory=list)
+    questions: List[QuestionResult] = Field(default_factory=list)

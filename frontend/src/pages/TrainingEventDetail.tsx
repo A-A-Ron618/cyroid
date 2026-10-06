@@ -51,6 +51,7 @@ import {
   summarizeLabs,
 } from '../lib/trainingEvents'
 import { VMVisibilityControl } from '../components/events/VMVisibilityControl'
+import { EventResults } from '../components/events/EventResults'
 import { format, parseISO } from 'date-fns'
 import DOMPurify from 'dompurify'
 
@@ -1146,6 +1147,9 @@ export default function TrainingEventDetail() {
           )}
         </div>
       )}
+
+      {/* Results - the server decides who sees them; the section hides itself on 403 */}
+      {!isNew && event && <EventResults eventId={event.id} />}
 
       {/* VM Visibility Control - only show for running events with student participants */}
       {!isNew && event && event.status === 'running' && canManage && (

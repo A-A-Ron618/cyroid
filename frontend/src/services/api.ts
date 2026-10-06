@@ -2108,6 +2108,43 @@ export interface EventParticipant {
   hidden_vm_ids?: string[]
 }
 
+// Knowledge Check results for an event's students, read from the learner record
+export interface LearnerResult {
+  user_id: string
+  username?: string
+  range_id?: string
+  completed_steps: number
+  total_steps: number
+  answered: number
+  total_questions: number
+  correct: number
+  score_pct: number | null // null until the learner has answered something
+  last_activity: string | null
+}
+
+export interface QuestionOptionResult {
+  id: string
+  text?: string
+  correct: boolean
+  chosen: number
+}
+
+export interface QuestionResult {
+  question_id: string
+  step_id?: string
+  prompt?: string
+  answered: number
+  correct: number
+  correct_pct: number | null
+  options: QuestionOptionResult[]
+}
+
+export interface EventResults {
+  event_id: string
+  learners: LearnerResult[]
+  questions: QuestionResult[]
+}
+
 export interface VMVisibilityVM {
   id: string
   hostname: string
@@ -2287,6 +2324,13 @@ export const trainingEventsApi = {
   // Briefing (role-based content)
   getBriefing: (eventId: string) =>
     api.get<EventBriefing>(`/training-events/${eventId}/briefing`),
+
+  // Results (instructors and evaluators only; others get 403)
+  getResults: (eventId: string) =>
+    api.get<EventResults>(`/training-events/${eventId}/results`),
+
+  exportResultsCsv: (eventId: string) =>
+    api.get<Blob>(`/training-events/${eventId}/results.csv`, { responseType: 'blob' }),
 
   // VM Visibility Control
   getParticipantVMVisibility: (eventId: string, userId: string) =>

@@ -1,12 +1,14 @@
 # backend/proving_ground/api/training_events.py
 """Training Events API endpoints for scheduling and role-based content delivery."""
 
+import csv
+import io
 import logging
 from datetime import datetime
 from typing import Annotated, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,7 @@ from proving_ground.models.user import User
 from proving_ground.models.event import TrainingEvent, EventParticipant, EventStatus
 from proving_ground.models.content import Content
 from proving_ground.models.blueprint import RangeBlueprint
+from proving_ground.services.learner_results import build_event_results
 from proving_ground.schemas.event import (
     EventCreate,
     EventUpdate,
@@ -24,6 +27,7 @@ from proving_ground.schemas.event import (
     EventDetailResponse,
     EventParticipantCreate,
     EventParticipantResponse,
+    EventResultsResponse,
     EventBriefingResponse,
     EventContentItem,
     ParticipantRole,
@@ -1580,3 +1584,64 @@ def bulk_update_vm_visibility(
         "is_hidden": data.is_hidden,
         "updated_count": updated_count,
     }
+
+
+# ============ Results ============
+
+
+def _event_for_results(event_id: UUID, user: User, db: Session) -> TrainingEvent:
+    """The event, if this user may read its cohort's results.
+
+    Results are for the people running the event: whoever `get_user_event_role` makes an
+    instructor or evaluator, which is the event's creator, participants given those roles, and
+    platform admins, engineers and evaluators who are not participants. Students and observers
+    get 403 -- a student's own answers already come back to them on the walkthrough.
+    """
+    event = db.query(TrainingEvent).filter(TrainingEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    role = get_user_event_role(event, user, db)
+    if role not in (ParticipantRole.INSTRUCTOR.value, ParticipantRole.EVALUATOR.value):
+        raise HTTPException(
+            status_code=403, detail="Only instructors and evaluators can see results"
+        )
+    return event
+
+
+@router.get("/{event_id}/results", response_model=EventResultsResponse)
+def get_event_results(event_id: UUID, db: DBSession, current_user: CurrentUser):
+    """Knowledge Check results for the event's students: per learner and per question."""
+    event = _event_for_results(event_id, current_user, db)
+    results = build_event_results(event, db)
+    return EventResultsResponse(
+        event_id=event.id, learners=results.learners, questions=results.questions
+    )
+
+
+@router.get("/{event_id}/results.csv")
+def export_event_results(event_id: UUID, db: DBSession, current_user: CurrentUser):
+    """One row per recorded answer, for analysis outside the platform."""
+    event = _event_for_results(event_id, current_user, db)
+    results = build_event_results(event, db)
+
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(
+        ["username", "question_id", "step_id", "selected_option_id", "correct", "answered_at"]
+    )
+    for a in results.answers:
+        writer.writerow(
+            [
+                a.username,
+                a.question_id,
+                a.step_id or "",
+                a.selected_option_id,
+                "true" if a.correct else "false",
+                a.answered_at or "",
+            ]
+        )
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="event-{event.id}-results.csv"'},
+    )
