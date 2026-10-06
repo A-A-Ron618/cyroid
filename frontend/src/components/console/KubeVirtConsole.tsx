@@ -19,7 +19,7 @@
  * reconnect; nothing here holds one.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import RFB from '@novnc/novnc/lib/rfb'
+import RFB from '@novnc/novnc'
 import { Clipboard, Keyboard, Maximize2, RefreshCw } from 'lucide-react'
 
 type Status = 'connecting' | 'connected' | 'disconnected' | 'error'

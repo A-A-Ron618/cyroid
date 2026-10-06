@@ -1,5 +1,5 @@
 // @novnc/novnc ships no typings. Only the surface KubeVirtConsole uses is declared.
-declare module '@novnc/novnc/lib/rfb' {
+declare module '@novnc/novnc' {
   export interface RFBCredentials {
     username?: string
     password?: string

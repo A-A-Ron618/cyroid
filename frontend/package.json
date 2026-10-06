@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
-    "@novnc/novnc": "^1.6.0",
+    "@novnc/novnc": "^1.7.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tiptap/extension-code-block-lowlight": "^3.15.3",
     "@tiptap/extension-image": "^3.15.3",

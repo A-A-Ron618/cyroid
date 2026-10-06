@@ -11,6 +11,11 @@ export default defineConfig({
     // browser since 2021 (Chrome 89, Firefox 89, Safari 15), which is where the product is used.
     target: 'es2022',
   },
+  // The dev server pre-bundles dependencies with esbuild under its own target, which build.target
+  // does not reach, so noVNC's top-level await fails there too and the dev server exits on start.
+  optimizeDeps: {
+    esbuildOptions: { target: 'es2022' },
+  },
   // Without this, vitest globs the whole project and collects the Playwright
   // specs under e2e/ — which use Playwright's `test.describe`, not vitest's —
   // and fails to parse them. Unit tests are vitest and live beside the source;
